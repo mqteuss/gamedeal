@@ -205,10 +205,14 @@ export default function App() {
     ? monitoredGames 
     : deals.map(deal => {
         const storeObj = availableStores.find(s => s.id === deal.storeID);
+        
+        // Otimização: Troca a miniatura de baixa resolução (120x45) por uma de melhor qualidade (231x87)
+        const optimizedThumb = deal.thumb.replace(/capsule_sm_120/g, 'capsule_231x87');
+        
         return {
           id: deal.dealID,
           title: deal.title,
-          imageUrl: deal.thumb,
+          imageUrl: optimizedThumb,
           originalPrice: parseFloat(deal.normalPrice) * exchangeRate,
           discountedPrice: parseFloat(deal.salePrice) * exchangeRate,
           discountPercentage: Math.round(parseFloat(deal.savings)),
