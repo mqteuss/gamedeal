@@ -7,6 +7,7 @@ import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapsh
 import { GameDeal } from './types';
 import { get, set } from 'idb-keyval';
 import { motion, AnimatePresence } from 'motion/react';
+import { GameModal } from './components/GameModal';
 
 export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +36,8 @@ export default function App() {
   const [monitoredGames, setMonitoredGames] = useState<GameDeal[]>([]);
   const [showMonitoredOnly, setShowMonitoredOnly] = useState(false);
   const [monitoredVisibleCount, setMonitoredVisibleCount] = useState(20);
+
+  const [selectedGame, setSelectedGame] = useState<GameDeal | null>(null);
 
   // Load monitored games from IndexedDB
   useEffect(() => {
@@ -203,7 +206,11 @@ export default function App() {
   const availableStores = useMemo(() => {
     return apiStores
       .filter(s => s.isActive === 1)
-      .map(s => ({ id: s.storeID, name: s.storeName }))
+      .map(s => ({ 
+        id: s.storeID, 
+        name: s.storeName,
+        icon: `https://www.cheapshark.com${s.images.icon}`
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [apiStores]);
 
@@ -219,17 +226,22 @@ export default function App() {
         
         return {
           id: deal.dealID,
+          gameID: deal.gameID,
           title: deal.title,
           imageUrl: optimizedThumb,
           originalPrice: parseFloat(deal.normalPrice) * exchangeRate,
           discountedPrice: parseFloat(deal.salePrice) * exchangeRate,
           discountPercentage: Math.round(parseFloat(deal.savings)),
           store: storeObj ? storeObj.name : 'Desconhecida',
+          storeIcon: storeObj ? storeObj.icon : '',
           platform: 'PC',
           url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`,
           metacriticScore: deal.metacriticScore,
           steamRatingPercent: deal.steamRatingPercent,
-          steamRatingText: deal.steamRatingText
+          steamRatingText: deal.steamRatingText,
+          steamRatingCount: deal.steamRatingCount,
+          releaseDate: deal.releaseDate,
+          dealRating: deal.dealRating
         };
       });
 
@@ -363,6 +375,7 @@ export default function App() {
                         deal={deal}
                         isMonitored={monitoredGames.some(g => g.id === deal.id)}
                         onToggleMonitor={toggleMonitor}
+                        onClick={() => setSelectedGame(deal)}
                       />
                     ))}
                   </div>
@@ -419,6 +432,15 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      {selectedGame && (
+        <GameModal 
+          game={selectedGame} 
+          onClose={() => setSelectedGame(null)} 
+          exchangeRate={exchangeRate}
+          availableStores={availableStores}
+        />
+      )}
     </div>
   );
 }

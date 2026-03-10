@@ -68,3 +68,30 @@ export async function getDeals(params: GetDealsParams = {}): Promise<Deal[]> {
   }
   return response.json();
 }
+
+export interface GameDetails {
+  info: {
+    title: string;
+    steamAppID: string | null;
+    thumb: string;
+  };
+  cheapestPriceEver: {
+    price: string;
+    date: number;
+  };
+  deals: Array<{
+    storeID: string;
+    dealID: string;
+    price: string;
+    retailPrice: string;
+    savings: string;
+  }>;
+}
+
+export async function getGameDetails(gameID: string): Promise<GameDetails> {
+  const response = await fetch(`${BASE_URL}/games?id=${gameID}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch game details');
+  }
+  return response.json();
+}
