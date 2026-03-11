@@ -25,22 +25,49 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      
+      // Previne glitch no mobile (iOS rubber band effect no topo e no bottom)
+      if (currentScrollY <= 0) {
+        setIsVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY + window.innerHeight >= document.documentElement.scrollHeight) {
+        setIsVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+
       // Adiciona uma margem de limite para evitar esconder o header em scrolls curtinhos
-      if (currentScrollY > 60 && currentScrollY > lastScrollY.current + 10) {
+      if (currentScrollY > 60 && currentScrollY > lastScrollY.current + 15) {
         setIsVisible(false);
-      } else if (currentScrollY < lastScrollY.current - 10 || currentScrollY < 10) {
+      } else if (currentScrollY < lastScrollY.current - 15) {
         setIsVisible(true);
       }
+      
       lastScrollY.current = currentScrollY;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Usando um throttle básico via requestAnimationFrame para evitar flutuações extremas
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 pointer-events-none transition-transform duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 pointer-events-none transition-transform duration-300 ease-in-out ${
         isVisible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
