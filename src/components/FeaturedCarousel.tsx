@@ -40,9 +40,11 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ deals, onDea
 
   // Touch swipe
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
     touchStartX.current = e.touches[0].clientX;
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     if (deltaX > 50) goPrev();
     else if (deltaX < -50) goNext();

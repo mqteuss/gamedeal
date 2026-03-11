@@ -217,38 +217,39 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
           loading="lazy"
           decoding="async"
         />
-        {onToggleMonitor && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleMonitor(deal);
-            }}
-            className={`absolute top-1 left-1 p-1.5 rounded-sm backdrop-blur-md transition-colors z-10 ${
-              isMonitored 
-                ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
-                : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
-            }`}
-            aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-            title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-          >
-            {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
-          </button>
-        )}
-        {/* Share button on mobile card too */}
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowShare(!showShare);
-            }}
-            className="absolute bottom-1 left-1 p-1.5 rounded-sm backdrop-blur-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors z-10"
-            title="Compartilhar"
-          >
-            <Share2 size={14} />
-          </button>
-          {showShare && (
+        {/* Share & Monitor buttons */}
+        <div className="absolute bottom-1 left-1 flex gap-1 z-10">
+          {onToggleMonitor && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleMonitor(deal);
+              }}
+              className={`p-1.5 rounded-sm backdrop-blur-md transition-colors ${
+                isMonitored 
+                  ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
+                  : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
+              }`}
+              aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+              title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+            >
+              {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
+            </button>
+          )}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowShare(!showShare);
+              }}
+              className="p-1.5 rounded-sm backdrop-blur-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors"
+              title="Compartilhar"
+            >
+              <Share2 size={14} />
+            </button>
+            {showShare && (
             <div 
               ref={shareRef}
               className="absolute z-20 bottom-8 left-1 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px]"
@@ -266,8 +267,9 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
                 <Send size={14} />
                 Telegram
               </button>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
