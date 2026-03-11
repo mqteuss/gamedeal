@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
@@ -216,6 +216,55 @@ export default function App() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Gesto de swipe para abrir/fechar sidebar no mobile
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+
+      // Ignora se o movimento vertical é maior que o horizontal (scroll)
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        touchStartRef.current = null;
+        return;
+      }
+
+      const SWIPE_THRESHOLD = 60;
+
+      // Swipe para a direita a partir da borda esquerda → abrir
+      if (!isSidebarOpen && touchStartRef.current.x < 40 && deltaX > SWIPE_THRESHOLD) {
+        setIsSidebarOpen(true);
+      }
+
+      // Swipe para a esquerda → fechar
+      if (isSidebarOpen && deltaX < -SWIPE_THRESHOLD) {
+        setIsSidebarOpen(false);
+      }
+
+      touchStartRef.current = null;
+    };
+
+    // Só adiciona no mobile
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    if (mediaQuery.matches) {
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isSidebarOpen]);
+
   const displayedDeals = showMonitoredOnly 
     ? monitoredGames.slice(0, monitoredVisibleCount) 
     : deals.map(deal => {
@@ -254,20 +303,6 @@ export default function App() {
       />
       
       <div className="flex pt-16 min-h-screen">
-        {/* Invisible edge drag area to open sidebar */}
-        {!isSidebarOpen && (
-          <motion.div 
-            className="fixed inset-y-0 left-0 w-4 z-30 md:hidden"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0}
-            onDragEnd={(e, info) => {
-              if (info.offset.x > 50) {
-                setIsSidebarOpen(true);
-              }
-            }}
-          />
-        )}
 
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
