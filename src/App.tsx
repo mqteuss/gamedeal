@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
-import { Frown, Loader2, ArrowDownUp, SearchX, Ghost } from 'lucide-react';
+import { SortDropdown } from './components/SortDropdown';
+import { Frown, Loader2, SearchX, Ghost } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
 import { get, set } from 'idb-keyval';
@@ -350,25 +351,22 @@ export default function App() {
               </div>
               
               {!showMonitoredOnly && (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5">
-                    <ArrowDownUp size={16} className="text-zinc-400" />
-                    <select 
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
-                      className="bg-transparent text-sm text-zinc-300 focus:outline-none cursor-pointer"
-                    >
-                      <option value="Deal Rating">Relevância</option>
-                      <option value="Price">Menor Preço</option>
-                      <option value="Savings">Maior Desconto</option>
-                      <option value="Metacritic">Nota Metacritic</option>
-                      <option value="Reviews">Avaliações Steam</option>
-                      <option value="Recent">Mais Recentes</option>
-                      <option value="Release">Data de Lançamento</option>
-                      <option value="Title">Ordem Alfabética</option>
-                    </select>
-                  </div>
-                  <span className="text-zinc-400 text-sm font-medium bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800 hidden sm:block">
+                <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                  <SortDropdown 
+                    value={sortBy}
+                    onChange={(val) => setSortBy(val as any)}
+                    options={[
+                      { value: "Deal Rating", label: "Relevância" },
+                      { value: "Price", label: "Menor Preço" },
+                      { value: "Savings", label: "Maior Desconto" },
+                      { value: "Metacritic", label: "Nota Metacritic" },
+                      { value: "Reviews", label: "Avaliações Steam" },
+                      { value: "Recent", label: "Mais Recentes" },
+                      { value: "Release", label: "Data de Lançamento" },
+                      { value: "Title", label: "Ordem Alfabética" }
+                    ]}
+                  />
+                  <span className="text-zinc-400 text-sm font-medium bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800 ml-auto sm:ml-0">
                     {deals.length} {deals.length === 1 ? 'jogo' : 'jogos'}
                   </span>
                 </div>
