@@ -179,7 +179,9 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
                       if (!store) return null;
                       
                       const savings = Math.round(parseFloat(deal.savings));
-                      const isBestDeal = deal.dealID === game.id;
+                      // Marca como melhor oferta o deal com menor preço
+                      const cheapestPrice = Math.min(...details.deals.map(d => parseFloat(d.price)));
+                      const isBestDeal = parseFloat(deal.price) === cheapestPrice;
 
                       return (
                         <a
