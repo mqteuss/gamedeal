@@ -371,63 +371,60 @@ export default function App() {
               )}
             </div>
 
-            {isLoading && pageNumber === 0 && !showMonitoredOnly ? (
-              <div className="flex flex-col items-center justify-center py-32 text-center px-4">
-                <div className="bg-emerald-500/10 p-8 rounded-full mb-8 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
-                  <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Carregando ofertas</h3>
-                <p className="text-zinc-400 max-w-md text-lg leading-relaxed">Buscando os melhores preços em todas as lojas...</p>
-              </div>
-            ) : error && !showMonitoredOnly ? (
-              <div className="flex flex-col items-center justify-center py-32 text-center px-4">
-                <div className="bg-red-500/10 p-8 rounded-full mb-8 border border-red-500/20 shadow-2xl shadow-red-500/10">
-                  <Frown size={56} className="text-red-500" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Ops! Algo deu errado</h3>
-                <p className="text-zinc-400 max-w-md text-lg leading-relaxed">{error}</p>
-              </div>
-            ) : (
-              <>
-                {displayedDeals.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {displayedDeals.map(deal => (
-                      <div key={deal.id} className="hidden sm:block">
-                        <GameCard 
-                          deal={deal}
-                          isMonitored={monitoredGames.some(g => g.id === deal.id)}
-                          onToggleMonitor={toggleMonitor}
-                          onClick={() => setSelectedGame(deal)}
-                          layout="vertical"
-                        />
-                      </div>
-                    ))}
-                    {displayedDeals.map(deal => (
-                      <div key={`mobile-${deal.id}`} className="block sm:hidden">
-                        <GameCard 
-                          deal={deal}
-                          isMonitored={monitoredGames.some(g => g.id === deal.id)}
-                          onToggleMonitor={toggleMonitor}
-                          onClick={() => setSelectedGame(deal)}
-                          layout="horizontal"
-                        />
-                      </div>
-                    ))}
+            {/* ----- ABA OFERTAS ----- */}
+            <div className={showMonitoredOnly ? 'hidden' : 'block'}>
+              {isLoading && pageNumber === 0 ? (
+                <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+                  <div className="bg-emerald-500/10 p-8 rounded-full mb-8 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
+                    <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-32 text-center px-4">
-                    <div className="bg-zinc-900/50 p-8 rounded-full mb-8 border border-white/5 shadow-2xl shadow-black/50">
-                      {showMonitoredOnly ? <Ghost size={56} className="text-zinc-500" /> : <SearchX size={56} className="text-zinc-500" />}
+                  <h3 className="text-2xl font-bold text-white mb-3">Carregando ofertas</h3>
+                  <p className="text-zinc-400 max-w-md text-lg leading-relaxed">Buscando os melhores preços em todas as lojas...</p>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+                  <div className="bg-red-500/10 p-8 rounded-full mb-8 border border-red-500/20 shadow-2xl shadow-red-500/10">
+                    <Frown size={56} className="text-red-500" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">Ops! Algo deu errado</h3>
+                  <p className="text-zinc-400 max-w-md text-lg leading-relaxed">{error}</p>
+                </div>
+              ) : (
+                <>
+                  {displayedDeals.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {displayedDeals.map(deal => (
+                        <div key={deal.id} className="hidden sm:block">
+                          <GameCard 
+                            deal={deal}
+                            isMonitored={monitoredGames.some(g => g.id === deal.id)}
+                            onToggleMonitor={toggleMonitor}
+                            onClick={() => setSelectedGame(deal)}
+                            layout="vertical"
+                          />
+                        </div>
+                      ))}
+                      {displayedDeals.map(deal => (
+                        <div key={`mobile-${deal.id}`} className="block sm:hidden">
+                          <GameCard 
+                            deal={deal}
+                            isMonitored={monitoredGames.some(g => g.id === deal.id)}
+                            onToggleMonitor={toggleMonitor}
+                            onClick={() => setSelectedGame(deal)}
+                            layout="horizontal"
+                          />
+                        </div>
+                      ))}
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-3">
-                      {showMonitoredOnly ? 'Sua lista está vazia' : 'Nenhum jogo encontrado'}
-                    </h3>
-                    <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
-                      {showMonitoredOnly 
-                        ? 'Você ainda não está monitorando nenhum jogo. Explore as ofertas e clique no ícone de olho para adicioná-las aqui.' 
-                        : 'Não encontramos nenhuma oferta que corresponda aos seus filtros atuais. Que tal tentar uma busca diferente?'}
-                    </p>
-                    {!showMonitoredOnly && (
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+                      <div className="bg-zinc-900/50 p-8 rounded-full mb-8 border border-white/5 shadow-2xl shadow-black/50">
+                        <SearchX size={56} className="text-zinc-500" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-white mb-3">Nenhum jogo encontrado</h3>
+                      <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
+                        Não encontramos nenhuma oferta que corresponda aos seus filtros atuais. Que tal tentar uma busca diferente?
+                      </p>
                       <button 
                         onClick={() => {
                           setSearchQuery('');
@@ -439,31 +436,80 @@ export default function App() {
                       >
                         Limpar todos os filtros
                       </button>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
 
-                {/* Infinite Scroll Observer Target */}
-                {(showMonitoredOnly ? monitoredVisibleCount < monitoredGames.length : hasMore) && displayedDeals.length > 0 && (
-                  <div ref={observerTarget} className="w-full py-12 flex justify-center items-center">
-                    {isLoadingMore ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                        <span className="text-sm text-zinc-500">Carregando mais ofertas...</span>
+                  {/* Infinite Scroll - Ofertas */}
+                  {hasMore && displayedDeals.length > 0 && (
+                    <div ref={!showMonitoredOnly ? observerTarget : undefined} className="w-full py-12 flex justify-center items-center">
+                      {isLoadingMore ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                          <span className="text-sm text-zinc-500">Carregando mais ofertas...</span>
+                        </div>
+                      ) : (
+                        <div className="h-8 w-full" />
+                      )}
+                    </div>
+                  )}
+                  
+                  {!hasMore && displayedDeals.length > 0 && (
+                    <div className="w-full py-12 flex justify-center">
+                      <p className="text-zinc-500 font-medium">Você chegou ao fim das ofertas.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ----- ABA MONITORADOS ----- */}
+            <div className={showMonitoredOnly ? 'block' : 'hidden'}>
+              {monitoredGames.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {monitoredGames.slice(0, monitoredVisibleCount).map(deal => (
+                      <div key={`monitored-${deal.id}`} className="hidden sm:block">
+                        <GameCard 
+                          deal={deal}
+                          isMonitored={true}
+                          onToggleMonitor={toggleMonitor}
+                          onClick={() => setSelectedGame(deal)}
+                          layout="vertical"
+                        />
                       </div>
-                    ) : (
+                    ))}
+                    {monitoredGames.slice(0, monitoredVisibleCount).map(deal => (
+                      <div key={`mobile-monitored-${deal.id}`} className="block sm:hidden">
+                        <GameCard 
+                          deal={deal}
+                          isMonitored={true}
+                          onToggleMonitor={toggleMonitor}
+                          onClick={() => setSelectedGame(deal)}
+                          layout="horizontal"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Infinite Scroll - Monitorados */}
+                  {monitoredVisibleCount < monitoredGames.length && (
+                    <div ref={showMonitoredOnly ? observerTarget : undefined} className="w-full py-12 flex justify-center items-center">
                       <div className="h-8 w-full" />
-                    )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+                  <div className="bg-zinc-900/50 p-8 rounded-full mb-8 border border-white/5 shadow-2xl shadow-black/50">
+                    <Ghost size={56} className="text-zinc-500" />
                   </div>
-                )}
-                
-                {!hasMore && displayedDeals.length > 0 && !showMonitoredOnly && (
-                  <div className="w-full py-12 flex justify-center">
-                    <p className="text-zinc-500 font-medium">Você chegou ao fim das ofertas.</p>
-                  </div>
-                )}
-              </>
-            )}
+                  <h3 className="text-2xl font-bold text-white mb-3">Sua lista está vazia</h3>
+                  <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
+                    Você ainda não está monitorando nenhum jogo. Explore as ofertas e clique no ícone de olho para adicioná-las aqui.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </main>
       </div>
