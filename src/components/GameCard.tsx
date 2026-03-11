@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GameDeal } from '../types';
-import { Tag, Star, ThumbsUp, Eye, EyeOff, Flame, Calendar } from 'lucide-react';
+import { Tag, Star, ThumbsUp, Eye, EyeOff, Flame, Calendar, Share2, Copy, Check, MessageCircle, Send } from 'lucide-react';
 
 interface GameCardProps {
   deal: GameDeal;
@@ -11,10 +11,73 @@ interface GameCardProps {
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, onToggleMonitor, onClick, layout = 'horizontal' }) => {
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
   const formatReleaseDate = (timestamp?: number) => {
     if (!timestamp) return null;
     return new Date(timestamp * 1000).toLocaleDateString('pt-BR', { year: 'numeric', month: 'short' });
   };
+
+  const formatPrice = (price: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+
+  // Fechar share menu ao clicar fora
+  useEffect(() => {
+    if (!showShare) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setShowShare(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showShare]);
+
+  const shareText = `🎮 ${deal.title}\n💰 ${formatPrice(deal.discountedPrice)} (-${deal.discountPercentage}%)\n🏪 ${deal.store}\n🔗 ${deal.url}`;
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(deal.url);
+      setCopied(true);
+      setTimeout(() => { setCopied(false); setShowShare(false); }, 1200);
+    } catch { /* fallback */ }
+  };
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+    setShowShare(false);
+  };
+
+  const handleTelegram = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(deal.url)}&text=${encodeURIComponent(`🎮 ${deal.title} — ${formatPrice(deal.discountedPrice)} (-${deal.discountPercentage}%)`)}`, '_blank');
+    setShowShare(false);
+  };
+
+  const ShareMenu = () => (
+    <div 
+      ref={shareRef}
+      className="absolute z-20 bottom-full mb-2 right-0 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px] animate-in fade-in"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button onClick={handleCopyLink} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+        {copied ? 'Copiado!' : 'Copiar Link'}
+      </button>
+      <button onClick={handleWhatsApp} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        <MessageCircle size={14} />
+        WhatsApp
+      </button>
+      <button onClick={handleTelegram} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        <Send size={14} />
+        Telegram
+      </button>
+    </div>
+  );
 
   if (layout === 'vertical') {
     return (
@@ -81,31 +144,46 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
           
           {/* Bottom Row */}
           <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-            {onToggleMonitor && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleMonitor(deal);
-                }}
-                className={`p-1.5 rounded-sm transition-colors ${
-                  isMonitored 
-                    ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
-                    : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'
-                }`}
-                aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-                title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-              >
-                {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {onToggleMonitor && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMonitor(deal);
+                  }}
+                  className={`p-1.5 rounded-sm transition-colors ${
+                    isMonitored 
+                      ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
+                      : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'
+                  }`}
+                  aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+                  title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+                >
+                  {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
+              )}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowShare(!showShare);
+                  }}
+                  className="p-1.5 rounded-sm bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Compartilhar"
+                >
+                  <Share2 size={14} />
+                </button>
+                {showShare && <ShareMenu />}
+              </div>
+            </div>
             
             <div className="flex items-center gap-2 bg-zinc-950/50 rounded-sm overflow-hidden ml-auto">
               <div className="px-2 py-1 flex flex-col items-end justify-center">
                 <span className="text-[10px] text-zinc-500 line-through leading-none mb-0.5">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.originalPrice)}
+                  {formatPrice(deal.originalPrice)}
                 </span>
                 <span className="text-sm font-medium text-[#a3d955] leading-none">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.discountedPrice)}
+                  {formatPrice(deal.discountedPrice)}
                 </span>
               </div>
               <a 
@@ -157,6 +235,40 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
             {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
           </button>
         )}
+        {/* Share button on mobile card too */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowShare(!showShare);
+            }}
+            className="absolute bottom-1 left-1 p-1.5 rounded-sm backdrop-blur-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors z-10"
+            title="Compartilhar"
+          >
+            <Share2 size={14} />
+          </button>
+          {showShare && (
+            <div 
+              ref={shareRef}
+              className="absolute z-20 bottom-8 left-1 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button onClick={handleCopyLink} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                {copied ? 'Copiado!' : 'Copiar Link'}
+              </button>
+              <button onClick={handleWhatsApp} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                <MessageCircle size={14} />
+                WhatsApp
+              </button>
+              <button onClick={handleTelegram} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                <Send size={14} />
+                Telegram
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Content Section */}
@@ -204,10 +316,10 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
           
           <div className="flex flex-col items-end mt-2">
             <span className="text-[10px] sm:text-xs text-zinc-500 line-through leading-none mb-1">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.originalPrice)}
+              {formatPrice(deal.originalPrice)}
             </span>
             <span className="text-sm sm:text-base font-medium text-[#a3d955] leading-none">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.discountedPrice)}
+              {formatPrice(deal.discountedPrice)}
             </span>
           </div>
         </div>

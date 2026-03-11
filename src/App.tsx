@@ -3,14 +3,18 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
 import { SortDropdown } from './components/SortDropdown';
+import { SkeletonCard } from './components/SkeletonCard';
 import { Frown, Loader2, SearchX, Ghost } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
 import { get, set } from 'idb-keyval';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameModal } from './components/GameModal';
+import { FeaturedCarousel } from './components/FeaturedCarousel';
+import { useAppSettings } from './contexts/AppSettingsContext';
 
 export default function App() {
+  const { viewMode } = useAppSettings();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<string>('');
@@ -383,14 +387,24 @@ export default function App() {
             </div>
 
             {/* ----- ABA OFERTAS ----- */}
-            <div className={showMonitoredOnly ? 'hidden' : 'block'}>
+            <div className={`transition-opacity duration-200 ${showMonitoredOnly ? 'hidden' : 'block'}`}>
+              {/* Carrossel de destaques */}
+              {!isLoading && offersDeals.length > 0 && !debouncedSearch && (
+                <FeaturedCarousel deals={offersDeals} onDealClick={setSelectedGame} />
+              )}
+
               {isLoading && pageNumber === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32 text-center px-4">
-                  <div className="bg-emerald-500/10 p-8 rounded-full mb-8 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
-                    <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Carregando ofertas</h3>
-                  <p className="text-zinc-400 max-w-md text-lg leading-relaxed">Buscando os melhores preços em todas as lojas...</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={`sk-${i}`} className="hidden sm:block">
+                      <SkeletonCard layout="vertical" />
+                    </div>
+                  ))}
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={`sk-m-${i}`} className="block sm:hidden">
+                      <SkeletonCard layout="horizontal" />
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center px-4">
@@ -403,19 +417,22 @@ export default function App() {
               ) : (
                 <>
                   {offersDeals.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className={viewMode === 'list' 
+                      ? 'flex flex-col' 
+                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                    }>
                       {offersDeals.map(deal => (
-                        <div key={deal.id} className="hidden sm:block">
+                        <div key={deal.id} className={viewMode === 'list' ? 'block' : 'hidden sm:block'}>
                           <GameCard 
                             deal={deal}
                             isMonitored={monitoredGames.some(g => g.id === deal.id)}
                             onToggleMonitor={toggleMonitor}
                             onClick={() => setSelectedGame(deal)}
-                            layout="vertical"
+                            layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
                           />
                         </div>
                       ))}
-                      {offersDeals.map(deal => (
+                      {viewMode === 'grid' && offersDeals.map(deal => (
                         <div key={`mobile-${deal.id}`} className="block sm:hidden">
                           <GameCard 
                             deal={deal}
@@ -474,7 +491,7 @@ export default function App() {
             </div>
 
             {/* ----- ABA MONITORADOS ----- */}
-            <div className={showMonitoredOnly ? 'block' : 'hidden'}>
+            <div className={`transition-opacity duration-200 ${showMonitoredOnly ? 'block' : 'hidden'}`}>
               {monitoredGames.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

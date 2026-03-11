@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Gamepad2, Menu } from 'lucide-react';
+import { Search, Gamepad2, Menu, Sun, Moon, LayoutGrid, List } from 'lucide-react';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 
 interface HeaderProps {
   searchQuery: string;
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const { theme, toggleTheme, viewMode, toggleViewMode } = useAppSettings();
 
   // Refs para medir posição real dos botões de tab
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -43,28 +45,19 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [showMonitoredOnly]);
 
-  // Atualiza indicador quando aba muda ou quando o count muda (largura do texto muda)
-  useEffect(() => {
-    updateIndicator();
-  }, [updateIndicator, monitoredCount]);
-
-  // Também atualiza após resize
+  useEffect(() => { updateIndicator(); }, [updateIndicator, monitoredCount]);
   useEffect(() => {
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
   }, [updateIndicator]);
 
   const handleTabSwitch = (toMonitored: boolean) => {
-    // Salva a posição atual
     if (showMonitoredOnly) {
       scrollPositions.current.monitorados = window.scrollY;
     } else {
       scrollPositions.current.ofertas = window.scrollY;
     }
-    
     setShowMonitoredOnly(toMonitored);
-    
-    // Restaura a posição da aba destino
     requestAnimationFrame(() => {
       const targetScroll = toMonitored 
         ? scrollPositions.current.monitorados 
@@ -83,14 +76,13 @@ export const Header: React.FC<HeaderProps> = ({
       }
       lastScrollY.current = currentScrollY;
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <>
-      {/* Header principal — esconde ao descer */}
+      {/* Header principal */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
@@ -131,19 +123,39 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
             
-            <div className="hidden md:flex items-center gap-4">
-              <button className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                Login
+            <div className="flex items-center gap-2">
+              {/* View mode toggle — hidden on mobile */}
+              <button
+                onClick={toggleViewMode}
+                className="hidden sm:flex p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                title={viewMode === 'grid' ? 'Mudar para lista' : 'Mudar para grade'}
+              >
+                {viewMode === 'grid' ? <List size={18} /> : <LayoutGrid size={18} />}
               </button>
-              <button className="bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-bold py-2 px-4 rounded-lg transition-colors">
-                Criar Conta
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+
+              <div className="hidden md:flex items-center gap-2 ml-2">
+                <button className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                  Login
+                </button>
+                <button className="bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-bold py-2 px-4 rounded-lg transition-colors">
+                  Criar Conta
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Barra de tabs — sempre visível */}
+      {/* Barra de tabs */}
       <div 
         className={`fixed left-0 right-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-white/10 transition-all duration-300 ${
           isVisible ? 'top-16' : 'top-0'
@@ -176,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Indicador ativo — posição medida via refs, animação CSS pura */}
+            {/* Indicador ativo */}
             <div
               className="absolute bottom-0 h-0.5 bg-white rounded-t-full transition-all duration-300 ease-out"
               style={{

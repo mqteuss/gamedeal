@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ExternalLink, Loader2, TrendingDown, History, Star, ThumbsUp, Calendar } from 'lucide-react';
+import { X, ExternalLink, Loader2, TrendingDown, History, Star, ThumbsUp, Calendar, Share2, Copy, Check, MessageCircle, Send, Trophy, BarChart3 } from 'lucide-react';
 import { GameDeal } from '../types';
 import { getGameDetails, GameDetails } from '../services/cheapshark';
+import { PriceChart } from './PriceChart';
 
 interface GameModalProps {
   game: GameDeal;
@@ -15,13 +16,14 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
   const [details, setDetails] = useState<GameDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const scrollYRef = useRef(0);
+  const shareRef = useRef<HTMLDivElement>(null);
 
-  // Bloqueia scroll do body — usa requestAnimationFrame para não competir com a animação
+  // Bloqueia scroll do body
   useEffect(() => {
     scrollYRef.current = window.scrollY;
-
-    // Agenda o lock pro próximo frame, evitando layout thrashing na abertura
     const raf = requestAnimationFrame(() => {
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
@@ -41,7 +43,7 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
     };
   }, []);
 
-  // Fetch adiado — espera a animação de abertura terminar antes de buscar dados
+  // Fetch adiado
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
@@ -53,10 +55,20 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
       } finally {
         setIsLoading(false);
       }
-    }, 250); // aguarda ~250ms para a animação suavizar
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [game.gameID]);
+
+  // Fechar share ao clicar fora
+  useEffect(() => {
+    if (!showShare) return;
+    const handleClick = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShowShare(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showShare]);
 
   const formatPrice = useCallback((priceUSD: string) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(priceUSD) * exchangeRate);
@@ -66,13 +78,27 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
     return new Date(timestamp * 1000).toLocaleDateString('pt-BR');
   }, []);
 
+  const isAtHistoricLow = details 
+    ? parseFloat(details.cheapestPriceEver.price) >= parseFloat(details.deals[0]?.price || '999')
+    : false;
+
+  const shareText = `🎮 ${game.title}\n💰 ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(game.discountedPrice)} (-${game.discountPercentage}%)\n🏪 ${game.store}\n🔗 ${game.url}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(game.url);
+      setCopied(true);
+      setTimeout(() => { setCopied(false); setShowShare(false); }, 1200);
+    } catch {}
+  };
+
   return (
     <AnimatePresence>
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
         onTouchMove={(e) => e.stopPropagation()}
       >
-        {/* Backdrop — sem blur para performance */}
+        {/* Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -83,7 +109,7 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
           style={{ touchAction: 'none', willChange: 'opacity' }}
         />
         
-        {/* Modal — usa só translate e opacity (GPU-accelerated) */}
+        {/* Modal */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -104,15 +130,55 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
             />
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
             
-            <button 
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
+            {/* Top buttons */}
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {/* Share */}
+              <div className="relative" ref={shareRef}>
+                <button 
+                  onClick={() => setShowShare(!showShare)}
+                  className="p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors"
+                >
+                  <Share2 size={18} />
+                </button>
+                {showShare && (
+                  <div className="absolute z-20 top-full mt-2 right-0 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px]">
+                    <button onClick={async () => {
+                      try { await navigator.clipboard.writeText(game.url); setCopied(true); setTimeout(() => { setCopied(false); setShowShare(false); }, 1200); } catch {}
+                    }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                      {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                      {copied ? 'Copiado!' : 'Copiar Link'}
+                    </button>
+                    <button onClick={() => { window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank'); setShowShare(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                      <MessageCircle size={14} />
+                      WhatsApp
+                    </button>
+                    <button onClick={() => { window.open(`https://t.me/share/url?url=${encodeURIComponent(game.url)}&text=${encodeURIComponent(`🎮 ${game.title} — ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(game.discountedPrice)} (-${game.discountPercentage}%)`)}`, '_blank'); setShowShare(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                      <Send size={14} />
+                      Telegram
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <button 
+                onClick={onClose}
+                className="p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
             <div className="absolute bottom-0 left-0 p-6 w-full">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 leading-tight">{game.title}</h2>
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">{game.title}</h2>
+                {/* Badge menor histórico */}
+                {isAtHistoricLow && (
+                  <span className="flex items-center gap-1 bg-amber-500/20 text-amber-400 text-xs font-bold px-2 py-1 rounded-md border border-amber-500/30 whitespace-nowrap">
+                    <Trophy size={12} />
+                    Menor Preço!
+                  </span>
+                )}
+              </div>
               
               <div className="flex flex-wrap items-center gap-3">
                 {game.metacriticScore && game.metacriticScore !== '0' && (
@@ -151,26 +217,51 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
             ) : details ? (
               <div className="space-y-8">
                 {/* Cheapest Price Ever */}
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className={`rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                  isAtHistoricLow 
+                    ? 'bg-amber-500/10 border border-amber-500/30' 
+                    : 'bg-emerald-500/10 border border-emerald-500/20'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <div className="bg-emerald-500/20 p-2.5 rounded-lg">
-                      <History className="text-emerald-400" size={24} />
+                    <div className={`p-2.5 rounded-lg ${isAtHistoricLow ? 'bg-amber-500/20' : 'bg-emerald-500/20'}`}>
+                      {isAtHistoricLow ? <Trophy className="text-amber-400" size={24} /> : <History className="text-emerald-400" size={24} />}
                     </div>
                     <div>
-                      <h4 className="text-emerald-400 font-semibold mb-0.5">Menor Preço Histórico</h4>
+                      <h4 className={`font-semibold mb-0.5 ${isAtHistoricLow ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        {isAtHistoricLow ? '🏆 Menor Preço de Todos os Tempos!' : 'Menor Preço Histórico'}
+                      </h4>
                       <p className="text-sm text-zinc-400">Registrado em {formatDate(details.cheapestPriceEver.date)}</p>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-emerald-400">
+                  <div className={`text-2xl font-bold ${isAtHistoricLow ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {formatPrice(details.cheapestPriceEver.price)}
                   </div>
                 </div>
+
+                {/* Price Comparison Chart */}
+                {details.deals.filter(d => parseFloat(d.savings) > 0).length > 1 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <BarChart3 className="text-zinc-400" size={20} />
+                      Comparação de Preços
+                    </h3>
+                    <div className="bg-zinc-950/50 rounded-xl p-4 border border-white/5">
+                      <PriceChart
+                        deals={details.deals}
+                        cheapestEver={details.cheapestPriceEver}
+                        exchangeRate={exchangeRate}
+                        stores={availableStores}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Current Deals */}
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                     <TrendingDown className="text-zinc-400" size={20} />
                     Ofertas Atuais
+                    <span className="text-sm text-zinc-500 font-normal">({details.deals.length} lojas)</span>
                   </h3>
                   
                   <div className="grid gap-3">
@@ -179,7 +270,6 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
                       if (!store) return null;
                       
                       const savings = Math.round(parseFloat(deal.savings));
-                      // Marca como melhor oferta o deal com menor preço
                       const cheapestPrice = Math.min(...details.deals.map(d => parseFloat(d.price)));
                       const isBestDeal = parseFloat(deal.price) === cheapestPrice;
 

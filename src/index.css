@@ -1,12 +1,90 @@
 @import "tailwindcss";
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-::-webkit-scrollbar {
-  display: none;
+/* ===== Skeleton shimmer ===== */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
+/* ===== Light theme overrides ===== */
+html.light {
+  color-scheme: light;
+}
+html.light body {
+  background-color: #f4f4f5; /* zinc-100 */
+  color: #27272a; /* zinc-800 */
+}
+
+/* Light theme — remap zinc dark surfaces to light equivalents */
+html.light .bg-zinc-950 { background-color: #f4f4f5 !important; }
+html.light .bg-zinc-950\/90 { background-color: rgba(255,255,255,0.92) !important; }
+html.light .bg-zinc-950\/95 { background-color: rgba(255,255,255,0.95) !important; }
+html.light .bg-zinc-900\/40 { background-color: rgba(255,255,255,0.7) !important; }
+html.light .bg-zinc-900\/50 { background-color: rgba(255,255,255,0.6) !important; }
+html.light .bg-zinc-900 { background-color: #ffffff !important; }
+html.light .bg-zinc-800\/80 { background-color: rgba(244,244,245,0.8) !important; }
+html.light .bg-zinc-800\/60 { background-color: rgba(244,244,245,0.6) !important; }
+html.light .bg-zinc-800 { background-color: #f4f4f5 !important; }
+
+/* Text colors */
+html.light .text-zinc-200 { color: #3f3f46 !important; }
+html.light .text-zinc-300 { color: #52525b !important; }
+html.light .text-zinc-400 { color: #71717a !important; }
+html.light .text-zinc-500 { color: #a1a1aa !important; }
+html.light .text-white { color: #18181b !important; }
+html.light .text-zinc-100 { color: #27272a !important; }
+
+/* Borders */
+html.light .border-white\/5 { border-color: rgba(0,0,0,0.08) !important; }
+html.light .border-white\/10 { border-color: rgba(0,0,0,0.1) !important; }
+html.light .border-zinc-800 { border-color: #e4e4e7 !important; }
+
+/* Inputs */
+html.light .bg-zinc-800\/80 input,
+html.light input.bg-zinc-800\/80 {
+  background-color: rgba(228,228,231,0.8) !important;
+  color: #18181b !important;
+}
+
+/* Shadows */
+html.light .shadow-black\/20 { --tw-shadow-color: rgba(0,0,0,0.06) !important; }
+html.light .shadow-black\/40 { --tw-shadow-color: rgba(0,0,0,0.1) !important; }
+html.light .shadow-black\/50 { --tw-shadow-color: rgba(0,0,0,0.08) !important; }
+
+/* Skeleton shimmer in light mode */
+html.light .skeleton-shimmer::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.04) 50%, transparent 100%);
+}
+
+/* Backdrop */
+html.light .bg-black\/80 { background-color: rgba(0,0,0,0.4) !important; }
+html.light .bg-black\/60 { background-color: rgba(0,0,0,0.3) !important; }
+html.light .bg-black\/40 { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-black\/20 { background-color: rgba(0,0,0,0.04) !important; }
+
+/* White bg overlays */
+html.light .bg-white\/5 { background-color: rgba(0,0,0,0.04) !important; }
+html.light .bg-white\/10 { background-color: rgba(0,0,0,0.06) !important; }
+
+/* Custom scrollbar para modal */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Hide scrollbar */
+::-webkit-scrollbar { display: none; }
 html, body {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
