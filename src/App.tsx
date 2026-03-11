@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
-import { Frown, Loader2, ArrowDownUp, Eye, SearchX, Ghost } from 'lucide-react';
+import { Frown, Loader2, ArrowDownUp, Eye, SearchX, Ghost, Flame } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
 import { get, set } from 'idb-keyval';
@@ -334,27 +334,63 @@ export default function App() {
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8 md:ml-64">
           <div className="max-w-7xl mx-auto">
+            {/* Tabs Navigation */}
+            <div className="flex items-center gap-2 mb-8 bg-zinc-900/50 p-1.5 rounded-2xl w-fit border border-white/5 shadow-inner shadow-black/20">
+              <button
+                onClick={() => setShowMonitoredOnly(false)}
+                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors z-10 ${
+                  !showMonitoredOnly ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {!showMonitoredOnly && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-zinc-800 rounded-xl border border-white/10 shadow-lg"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-20 flex items-center gap-2">
+                  <Flame size={18} className={!showMonitoredOnly ? 'text-amber-500' : ''} />
+                  Ofertas
+                </span>
+              </button>
+
+              <button
+                onClick={() => setShowMonitoredOnly(true)}
+                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors z-10 ${
+                  showMonitoredOnly ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {showMonitoredOnly && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-indigo-500/20 rounded-xl border border-indigo-500/30 shadow-lg"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-20 flex items-center gap-2">
+                  <Eye size={18} className={showMonitoredOnly ? 'text-indigo-400' : ''} />
+                  Monitorados
+                  {monitoredGames.length > 0 && (
+                    <span className={`ml-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${
+                      showMonitoredOnly ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-300'
+                    }`}>
+                      {monitoredGames.length}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-xl sm:text-2xl font-bold text-white">
                   {showMonitoredOnly 
-                    ? 'Monitorados' 
+                    ? 'Jogos Monitorados' 
                     : debouncedSearch 
                       ? `Resultados para "${debouncedSearch}"` 
                       : 'Destaques'}
                 </h2>
-                <button
-                  onClick={() => setShowMonitoredOnly(!showMonitoredOnly)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                    showMonitoredOnly 
-                      ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' 
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:bg-zinc-800 hover:text-white'
-                  }`}
-                >
-                  <Eye size={16} />
-                  <span className="hidden sm:inline">{showMonitoredOnly ? 'Ver Todas' : 'Ver Monitorados'}</span>
-                  <span className="sm:hidden">{showMonitoredOnly ? 'Todas' : 'Monitorados'}</span>
-                </button>
               </div>
               
               {!showMonitoredOnly && (
