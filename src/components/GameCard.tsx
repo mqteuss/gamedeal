@@ -87,9 +87,15 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
                   e.stopPropagation();
                   onToggleMonitor(deal);
                 }}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 bg-white/5 rounded-sm"
+                className={`p-1.5 rounded-sm transition-colors ${
+                  isMonitored 
+                    ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
+                    : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'
+                }`}
+                aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+                title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
               >
-                Remover
+                {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
               </button>
             )}
             

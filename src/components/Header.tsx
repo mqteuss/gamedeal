@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Gamepad2, Menu } from 'lucide-react';
 
 interface HeaderProps {
@@ -20,6 +20,58 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
+
+  // Refs para medir posição real dos botões de tab
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const ofertasRef = useRef<HTMLButtonElement>(null);
+  const monitoradosRef = useRef<HTMLButtonElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  // Salvar scroll position por aba
+  const scrollPositions = useRef({ ofertas: 0, monitorados: 0 });
+
+  const updateIndicator = useCallback(() => {
+    const container = tabsContainerRef.current;
+    const activeBtn = showMonitoredOnly ? monitoradosRef.current : ofertasRef.current;
+    if (container && activeBtn) {
+      const containerRect = container.getBoundingClientRect();
+      const btnRect = activeBtn.getBoundingClientRect();
+      setIndicatorStyle({
+        left: btnRect.left - containerRect.left,
+        width: btnRect.width,
+      });
+    }
+  }, [showMonitoredOnly]);
+
+  // Atualiza indicador quando aba muda ou quando o count muda (largura do texto muda)
+  useEffect(() => {
+    updateIndicator();
+  }, [updateIndicator, monitoredCount]);
+
+  // Também atualiza após resize
+  useEffect(() => {
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
+
+  const handleTabSwitch = (toMonitored: boolean) => {
+    // Salva a posição atual
+    if (showMonitoredOnly) {
+      scrollPositions.current.monitorados = window.scrollY;
+    } else {
+      scrollPositions.current.ofertas = window.scrollY;
+    }
+    
+    setShowMonitoredOnly(toMonitored);
+    
+    // Restaura a posição da aba destino
+    requestAnimationFrame(() => {
+      const targetScroll = toMonitored 
+        ? scrollPositions.current.monitorados 
+        : scrollPositions.current.ofertas;
+      window.scrollTo(0, targetScroll);
+    });
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -91,16 +143,17 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Barra de tabs — sempre visível, desliza pro topo quando header esconde */}
+      {/* Barra de tabs — sempre visível */}
       <div 
         className={`fixed left-0 right-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-white/10 transition-all duration-300 ${
           isVisible ? 'top-16' : 'top-0'
         }`}
       >
         <div className="flex items-center justify-center w-full px-4">
-          <div className="relative flex items-center gap-8">
+          <div className="relative flex items-center gap-8" ref={tabsContainerRef}>
             <button
-              onClick={() => setShowMonitoredOnly(false)}
+              ref={ofertasRef}
+              onClick={() => handleTabSwitch(false)}
               className={`relative py-3 px-2 text-sm font-medium transition-colors ${
                 !showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
               }`}
@@ -109,7 +162,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
-              onClick={() => setShowMonitoredOnly(true)}
+              ref={monitoradosRef}
+              onClick={() => handleTabSwitch(true)}
               className={`relative py-3 px-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                 showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
               }`}
@@ -122,12 +176,12 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Indicador ativo — CSS puro, sem Framer Motion */}
+            {/* Indicador ativo — posição medida via refs, animação CSS pura */}
             <div
               className="absolute bottom-0 h-0.5 bg-white rounded-t-full transition-all duration-300 ease-out"
               style={{
-                left: showMonitoredOnly ? 'calc(50% + 16px)' : '0px',
-                width: showMonitoredOnly ? 'calc(50% - 16px)' : 'calc(50% - 16px)',
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
               }}
             />
           </div>
