@@ -52,7 +52,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({ value, onChange, opt
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute top-full right-0 sm:left-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 z-50 overflow-hidden transform origin-top-right sm:origin-top-left"
+            className="absolute top-full right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 z-50 overflow-hidden transform origin-top-right"
             role="listbox"
           >
             <div className="py-1 max-h-[60vh] overflow-y-auto overscroll-contain">
