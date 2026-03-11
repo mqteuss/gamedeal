@@ -25,7 +25,7 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
         {/* Image */}
         <div className="w-full aspect-[460/215] relative bg-black/20">
           <img 
-            src={deal.imageUrl.replace(/capsule_231x87/g, 'header')} 
+            src={deal.imageUrl.includes('store_item_assets') ? deal.imageUrl : deal.imageUrl.replace(/capsule_231x87/g, 'header')} 
             alt={deal.title} 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
