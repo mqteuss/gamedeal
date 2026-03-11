@@ -115,26 +115,26 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [searchQuery, minPrice, maxPrice]);
 
-  // Reset pagination when filters change
+  // Reset pagination when filters change (ONLY filters, not tab switches)
   useEffect(() => {
-    if (showMonitoredOnly) {
-      setMonitoredVisibleCount(20);
-      return;
-    }
     setPageNumber(0);
     setDeals([]);
     setHasMore(true);
     setError(null);
-  }, [debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice, sortBy, showMonitoredOnly]);
+  }, [debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice, sortBy]);
+
+  // Reset monitored count when switching to Monitored tab
+  useEffect(() => {
+    if (showMonitoredOnly) {
+      setMonitoredVisibleCount(20);
+    }
+  }, [showMonitoredOnly]);
 
   // Fetch deals
   useEffect(() => {
+    // Se estiver na aba de monitorados ou não tiver taxa de câmbio, não busca ofertas
+    // Mas NÃO altera os estados de (isLoading, hasMore) para não resetar o que já foi carregado.
     if (exchangeRate === 0 || showMonitoredOnly) {
-      if (showMonitoredOnly) {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setHasMore(false);
-      }
       return;
     }
 
