@@ -16,6 +16,25 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Bloqueia scroll do body quando o modal está aberto
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchDetails = async () => {
       try {
@@ -42,13 +61,17 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           onClick={onClose}
+          style={{ touchAction: 'none' }}
         />
         
         <motion.div 
@@ -101,7 +124,7 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
