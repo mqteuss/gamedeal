@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
-import { Frown, Loader2, ArrowDownUp, Eye, SearchX, Ghost, Flame } from 'lucide-react';
+import { Frown, Loader2, ArrowDownUp, Ghost, SearchX } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
 import { get, set } from 'idb-keyval';
@@ -302,7 +302,50 @@ export default function App() {
         toggleSidebar={toggleSidebar}
       />
       
-      <div className="flex pt-16 min-h-screen">
+      <div className="flex pt-28 md:pt-16 min-h-screen">
+        {/* Minimalist Sticky Tabs (Mobile: Top, Desktop: Top of content) */}
+        <div className="fixed top-16 left-0 right-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-white/5 md:hidden">
+          <div className="flex items-center justify-center w-full px-4">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => setShowMonitoredOnly(false)}
+                className={`relative py-3 px-2 text-sm font-medium transition-colors ${
+                  !showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Ofertas
+                {!showMonitoredOnly && (
+                  <motion.div
+                    layoutId="activeTabUnderlineMobile"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-t-full"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowMonitoredOnly(true)}
+                className={`relative py-3 px-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Monitorados
+                {monitoredGames.length > 0 && (
+                  <span className="text-xs text-zinc-500">
+                    ({monitoredGames.length})
+                  </span>
+                )}
+                {showMonitoredOnly && (
+                  <motion.div
+                    layoutId="activeTabUnderlineMobile"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-t-full"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -318,7 +361,7 @@ export default function App() {
 
         {/* Sidebar */}
         <div 
-          className={`fixed inset-y-0 left-0 z-40 pt-16 w-[75vw] sm:w-[50vw] md:w-64 h-full bg-zinc-950/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border-r border-white/5 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+          className={`fixed inset-y-0 left-0 z-40 pt-28 md:pt-16 w-[75vw] sm:w-[50vw] md:w-64 h-full bg-zinc-950/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border-r border-white/5 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
         >
           <Sidebar 
             availableStores={availableStores}
@@ -334,52 +377,46 @@ export default function App() {
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8 md:ml-64">
           <div className="max-w-7xl mx-auto">
-            {/* Tabs Navigation */}
-            <div className="flex items-center gap-2 mb-8 bg-zinc-900/50 p-1.5 rounded-2xl w-fit border border-white/5 shadow-inner shadow-black/20">
-              <button
-                onClick={() => setShowMonitoredOnly(false)}
-                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors z-10 ${
-                  !showMonitoredOnly ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {!showMonitoredOnly && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-zinc-800 rounded-xl border border-white/10 shadow-lg"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-                <span className="relative z-20 flex items-center gap-2">
-                  <Flame size={18} className={!showMonitoredOnly ? 'text-amber-500' : ''} />
+            {/* Desktop Minimalist Tabs */}
+            <div className="hidden md:flex items-center justify-center border-b border-white/5 mb-8">
+              <div className="flex items-center gap-8 -mb-px">
+                <button
+                  onClick={() => setShowMonitoredOnly(false)}
+                  className={`relative py-3 px-2 text-sm font-medium transition-colors ${
+                    !showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
                   Ofertas
-                </span>
-              </button>
+                  {!showMonitoredOnly && (
+                    <motion.div
+                      layoutId="activeTabUnderlineDesktop"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-t-full"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                </button>
 
-              <button
-                onClick={() => setShowMonitoredOnly(true)}
-                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors z-10 ${
-                  showMonitoredOnly ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {showMonitoredOnly && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-indigo-500/20 rounded-xl border border-indigo-500/30 shadow-lg"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-                <span className="relative z-20 flex items-center gap-2">
-                  <Eye size={18} className={showMonitoredOnly ? 'text-indigo-400' : ''} />
+                <button
+                  onClick={() => setShowMonitoredOnly(true)}
+                  className={`relative py-3 px-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    showMonitoredOnly ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
                   Monitorados
                   {monitoredGames.length > 0 && (
-                    <span className={`ml-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${
-                      showMonitoredOnly ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-300'
-                    }`}>
-                      {monitoredGames.length}
+                    <span className="text-xs text-zinc-500">
+                      ({monitoredGames.length})
                     </span>
                   )}
-                </span>
-              </button>
+                  {showMonitoredOnly && (
+                    <motion.div
+                      layoutId="activeTabUnderlineDesktop"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-t-full"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
