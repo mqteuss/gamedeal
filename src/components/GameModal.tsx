@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ExternalLink, Loader2, TrendingDown, History, Star, ThumbsUp, Calendar } from 'lucide-react';
 import { GameDeal } from '../types';
@@ -15,28 +15,35 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
   const [details, setDetails] = useState<GameDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const scrollYRef = useRef(0);
 
-  // Bloqueia scroll do body quando o modal está aberto
+  // Bloqueia scroll do body — usa requestAnimationFrame para não competir com a animação
   useEffect(() => {
-    const scrollY = window.scrollY;
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
+    scrollYRef.current = window.scrollY;
+
+    // Agenda o lock pro próximo frame, evitando layout thrashing na abertura
+    const raf = requestAnimationFrame(() => {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollYRef.current}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+    });
 
     return () => {
+      cancelAnimationFrame(raf);
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.left = '';
       document.body.style.right = '';
-      window.scrollTo(0, scrollY);
+      window.scrollTo(0, scrollYRef.current);
     };
   }, []);
 
+  // Fetch adiado — espera a animação de abertura terminar antes de buscar dados
   useEffect(() => {
-    const fetchDetails = async () => {
+    const timer = setTimeout(async () => {
       try {
         setIsLoading(true);
         const data = await getGameDetails(game.gameID);
@@ -46,18 +53,18 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
       } finally {
         setIsLoading(false);
       }
-    };
+    }, 250); // aguarda ~250ms para a animação suavizar
 
-    fetchDetails();
+    return () => clearTimeout(timer);
   }, [game.gameID]);
 
-  const formatPrice = (priceUSD: string) => {
+  const formatPrice = useCallback((priceUSD: string) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(priceUSD) * exchangeRate);
-  };
+  }, [exchangeRate]);
 
-  const formatDate = (timestamp: number) => {
+  const formatDate = useCallback((timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('pt-BR');
-  };
+  }, []);
 
   return (
     <AnimatePresence>
@@ -65,20 +72,25 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
         className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
         onTouchMove={(e) => e.stopPropagation()}
       >
+        {/* Backdrop — sem blur para performance */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="absolute inset-0 bg-black/80"
           onClick={onClose}
-          style={{ touchAction: 'none' }}
+          style={{ touchAction: 'none', willChange: 'opacity' }}
         />
         
+        {/* Modal — usa só translate e opacity (GPU-accelerated) */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 30 }}
+          transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
           className="relative w-full max-w-3xl bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          style={{ willChange: 'transform, opacity' }}
         >
           {/* Header Image */}
           <div className="relative h-48 sm:h-64 w-full bg-black/50 flex-shrink-0">
@@ -87,12 +99,14 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
               alt={game.title} 
               className="w-full h-full object-cover opacity-60"
               referrerPolicy="no-referrer"
+              loading="eager"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
             
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md transition-colors"
+              className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors"
             >
               <X size={20} />
             </button>
@@ -173,7 +187,7 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
                           href={`https://www.cheapshark.com/redirect?dealID=${deal.dealID}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                          className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
                             isBestDeal 
                               ? 'bg-zinc-800/80 border-emerald-500/30 hover:bg-zinc-800 hover:border-emerald-500/50' 
                               : 'bg-zinc-900/50 border-white/5 hover:bg-zinc-800/80 hover:border-white/10'
