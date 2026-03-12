@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, Loader2, ArrowRight, Github, UserPlus, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -13,6 +13,13 @@ interface AuthModalProps {
 export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) => {
   const { refreshProfile } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+
+  // Sincroniza o mode com o initialMode sempre que o modal abrir
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
