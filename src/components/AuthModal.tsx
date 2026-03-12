@@ -96,7 +96,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
     });
   };
 
-  const saveProfileData = async (userId: string, displayName: string) => {
+  const saveProfileData = async (userId: string, displayName: string, userEmail?: string) => {
     const updateData: any = { username: displayName };
 
     // Comprimir e salvar avatar diretamente como base64
@@ -109,13 +109,29 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
       }
     }
 
-    const { error: profileError } = await supabase
+    // Pequeno delay para garantir que o trigger já criou o perfil
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Tentar update primeiro
+    const { error: updateError, count } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId);
 
-    if (profileError) {
-      console.error('Failed to update profile:', profileError);
+    if (updateError) {
+      console.error('Update failed, trying upsert:', updateError);
+      // Fallback: upsert (cria se não existir)
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: userEmail || '',
+          ...updateData,
+        });
+
+      if (upsertError) {
+        console.error('Failed to save profile:', upsertError);
+      }
     }
   };
 
@@ -151,7 +167,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         // Se o registro criou uma sessão ativa (sem confirmação de email), 
         // podemos atualizar o perfil agora
         if (signUpData.session && signUpData.user) {
-          await saveProfileData(signUpData.user.id, username.trim());
+          await saveProfileData(signUpData.user.id, username.trim(), email);
           await refreshProfile();
           handleClose();
         } else {
@@ -186,7 +202,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         // Verificar se há dados pendentes do cadastro para aplicar no perfil
         const pendingUsername = localStorage.getItem('pending_username');
         if (pendingUsername && signInData.user) {
-          await saveProfileData(signInData.user.id, pendingUsername);
+          await saveProfileData(signInData.user.id, pendingUsername, email);
           localStorage.removeItem('pending_username');
           localStorage.removeItem('pending_avatar');
         }
