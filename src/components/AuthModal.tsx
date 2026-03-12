@@ -43,13 +43,21 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
 
     try {
       if (mode === 'register') {
+        // Validação customizada de senha
+        const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{6,}$/;
+        if (!passwordRegex.test(password)) {
+          setError('A senha deve ter pelo mínimo 6 caracteres, contendo letras e números.');
+          setIsLoading(false);
+          return;
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
 
         if (signUpError) throw signUpError;
-        setSuccessMsg('Cadastro realizado com sucesso! Você já pode entrar.');
+        setSuccessMsg('Cadastro realizado com sucesso! Por favor, verifique sua caixa de entrada para confirmar o email antes de entrar.');
         setMode('login'); // Switch to login after successful registration
         setPassword(''); // Clear password field for security
       } else {
@@ -186,7 +194,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder={mode === 'register' ? 'Mínimo de 6 caracteres' : '••••••••'}
+                    placeholder={mode === 'register' ? 'Mínimo 6 chars (letras e números)' : '••••••••'}
                     autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                     minLength={mode === 'register' ? 6 : undefined}
                     className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-zinc-950/50 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
