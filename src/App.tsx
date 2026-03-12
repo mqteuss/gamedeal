@@ -4,6 +4,9 @@ import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
 import { SortDropdown } from './components/SortDropdown';
 import { SkeletonCard } from './components/SkeletonCard';
+import { ScrollToTop } from './components/ScrollToTop';
+import { OnboardingTour } from './components/OnboardingTour';
+import { useToast } from './components/Toast';
 import { Frown, Loader2, SearchX, Ghost } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
@@ -18,6 +21,8 @@ import { supabase } from './lib/supabase';
 export default function App() {
   const { viewMode } = useAppSettings();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +35,11 @@ export default function App() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
+
+  // Advanced filters
+  const [minDiscount, setMinDiscount] = useState(0);
+  const [minMetacritic, setMinMetacritic] = useState(0);
+  const [minSteamRating, setMinSteamRating] = useState(0);
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [apiStores, setApiStores] = useState<ApiStore[]>([]);
@@ -122,7 +132,10 @@ export default function App() {
         
       if (error) {
         console.error('Failed to delete monitored game:', error);
+        toast('Erro ao remover jogo', 'error');
         // Revert UI on failure (optional)
+      } else {
+        toast('Removido dos monitorados', 'info');
       }
     } else {
       // Optimistic UI update
@@ -154,8 +167,11 @@ export default function App() {
 
       if (error) {
         console.error('Failed to insert monitored game:', error);
+        toast('Erro ao monitorar jogo', 'error');
         // Revert UI on failure
         setMonitoredGames(prev => prev.filter(g => g.id !== deal.id));
+      } else {
+        toast('Adicionado aos monitorados!', 'success');
       }
     }
   };
@@ -384,6 +400,39 @@ export default function App() {
     })
   , [deals, availableStores, exchangeRate]);
 
+  // Client-side advanced filters
+  const offersDealsFiltered = useMemo(() => {
+    return offersDeals.filter(deal => {
+      if (minDiscount > 0 && deal.discountPercentage < minDiscount) return false;
+      if (minMetacritic > 0 && (!deal.metacriticScore || parseInt(deal.metacriticScore) < minMetacritic)) return false;
+      if (minSteamRating > 0 && (!deal.steamRatingPercent || parseInt(deal.steamRatingPercent) < minSteamRating)) return false;
+      return true;
+    });
+  }, [offersDeals, minDiscount, minMetacritic, minSteamRating]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA';
+
+      // Ctrl+K → focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+
+      // Only fire non-input shortcuts when not typing
+      if (!isInput) {
+        if (e.key === 'm' || e.key === 'M') {
+          setShowMonitoredOnly(prev => !prev);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans selection:bg-emerald-500/30 overflow-x-hidden">
       <Header 
@@ -397,6 +446,7 @@ export default function App() {
           setAuthModalMode(mode);
           setIsAuthModalOpen(true);
         }}
+        searchInputRef={searchInputRef}
       />
       
       {/* O main content padding pt-32 para compensar o header maior */}
@@ -426,6 +476,12 @@ export default function App() {
             setMinPrice={setMinPrice}
             maxPrice={maxPrice}
             setMaxPrice={setMaxPrice}
+            minDiscount={minDiscount}
+            setMinDiscount={setMinDiscount}
+            minMetacritic={minMetacritic}
+            setMinMetacritic={setMinMetacritic}
+            minSteamRating={minSteamRating}
+            setMinSteamRating={setMinSteamRating}
           />
         </div>
 
@@ -460,7 +516,7 @@ export default function App() {
                     ]}
                   />
                   <span className="text-zinc-400 text-sm font-medium bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800 ml-auto sm:ml-0">
-                    {deals.length} {deals.length === 1 ? 'jogo' : 'jogos'}
+                    {offersDealsFiltered.length} {offersDealsFiltered.length === 1 ? 'jogo' : 'jogos'}
                   </span>
                 </div>
               )}
@@ -469,8 +525,8 @@ export default function App() {
             {/* ----- ABA OFERTAS ----- */}
             <div className={`transition-opacity duration-200 ${showMonitoredOnly ? 'hidden' : 'block'}`}>
               {/* Carrossel de destaques */}
-              {!isLoading && offersDeals.length > 0 && !debouncedSearch && (
-                <FeaturedCarousel deals={offersDeals} onDealClick={setSelectedGame} />
+              {!isLoading && offersDealsFiltered.length > 0 && !debouncedSearch && (
+                <FeaturedCarousel deals={offersDealsFiltered} onDealClick={setSelectedGame} />
               )}
 
               {isLoading && pageNumber === 0 ? (
@@ -496,20 +552,26 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {offersDeals.length > 0 ? (
+                  {offersDealsFiltered.length > 0 ? (
                     <div className={viewMode === 'list' 
                       ? 'flex flex-col' 
                       : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                     }>
-                      {offersDeals.map(deal => (
-                        <GameCard 
+                      {offersDealsFiltered.map((deal, i) => (
+                        <motion.div
                           key={deal.id}
-                          deal={deal}
-                          isMonitored={monitoredIds.has(deal.id)}
-                          onToggleMonitor={toggleMonitor}
-                          onClick={() => setSelectedGame(deal)}
-                          layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
-                        />
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.5) }}
+                        >
+                          <GameCard 
+                            deal={deal}
+                            isMonitored={monitoredIds.has(deal.id)}
+                            onToggleMonitor={toggleMonitor}
+                            onClick={() => setSelectedGame(deal)}
+                            layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
+                          />
+                        </motion.div>
                       ))}
                     </div>
                   ) : (
@@ -526,7 +588,10 @@ export default function App() {
                           setSearchQuery('');
                           setSelectedStores([]);
                           setMinPrice('');
-                          setMaxPrice('');
+                         setMaxPrice('');
+                          setMinDiscount(0);
+                          setMinMetacritic(0);
+                          setMinSteamRating(0);
                         }}
                         className="mt-8 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-6 rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
                       >
@@ -536,7 +601,7 @@ export default function App() {
                   )}
 
                   {/* Infinite Scroll - Ofertas */}
-                  {hasMore && offersDeals.length > 0 && (
+                  {hasMore && offersDealsFiltered.length > 0 && (
                     <div ref={offersObserverRef} className="w-full py-12 flex justify-center items-center">
                       {isLoadingMore ? (
                         <div className="flex flex-col items-center gap-2">
@@ -549,7 +614,7 @@ export default function App() {
                     </div>
                   )}
                   
-                  {!hasMore && offersDeals.length > 0 && (
+                  {!hasMore && offersDealsFiltered.length > 0 && (
                     <div className="w-full py-12 flex justify-center">
                       <p className="text-zinc-500 font-medium">Você chegou ao fim das ofertas.</p>
                     </div>
@@ -629,6 +694,9 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)} 
         initialMode={authModalMode} 
       />
+
+      <ScrollToTop />
+      <OnboardingTour />
     </div>
   );
 }
