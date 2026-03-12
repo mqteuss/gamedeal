@@ -67,14 +67,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
     }
   };
 
-  // Comprime a imagem para 128x128 JPEG base64 (leve o suficiente para o banco)
-  const compressAvatar = (file: File): Promise<string> => {
+  // Comprime uma imagem base64 para 128x128 JPEG
+  const compressImage = (dataUrl: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        img.src = reader.result as string;
-      };
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const size = 128;
@@ -91,19 +87,19 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.onerror = reject;
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      img.src = dataUrl;
     });
   };
 
-  const saveProfileData = async (userId: string, displayName: string, userEmail?: string) => {
+  const saveProfileData = async (userId: string, displayName: string, userEmail?: string, avatarDataUrl?: string | null) => {
     const updateData: any = { username: displayName };
 
     // Comprimir e salvar avatar diretamente como base64
-    if (avatarFile) {
+    if (avatarDataUrl) {
       try {
-        const base64Avatar = await compressAvatar(avatarFile);
-        updateData.avatar_url = base64Avatar;
+        const compressed = await compressImage(avatarDataUrl);
+        updateData.avatar_url = compressed;
+        console.log('Avatar compressed successfully, length:', compressed.length);
       } catch (err) {
         console.error('Failed to compress avatar:', err);
       }
@@ -112,8 +108,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
     // Pequeno delay para garantir que o trigger já criou o perfil
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    console.log('Saving profile data:', { userId, username: displayName, hasAvatar: !!updateData.avatar_url });
+
     // Tentar update primeiro
-    const { error: updateError, count } = await supabase
+    const { error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId);
@@ -132,6 +130,8 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
       if (upsertError) {
         console.error('Failed to save profile:', upsertError);
       }
+    } else {
+      console.log('Profile saved successfully!');
     }
   };
 
@@ -167,7 +167,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         // Se o registro criou uma sessão ativa (sem confirmação de email), 
         // podemos atualizar o perfil agora
         if (signUpData.session && signUpData.user) {
-          await saveProfileData(signUpData.user.id, username.trim(), email);
+          await saveProfileData(signUpData.user.id, username.trim(), email, avatarPreview);
           await refreshProfile();
           handleClose();
         } else {
@@ -202,7 +202,8 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         // Verificar se há dados pendentes do cadastro para aplicar no perfil
         const pendingUsername = localStorage.getItem('pending_username');
         if (pendingUsername && signInData.user) {
-          await saveProfileData(signInData.user.id, pendingUsername, email);
+          const pendingAvatar = localStorage.getItem('pending_avatar');
+          await saveProfileData(signInData.user.id, pendingUsername, email, pendingAvatar);
           localStorage.removeItem('pending_username');
           localStorage.removeItem('pending_avatar');
         }
