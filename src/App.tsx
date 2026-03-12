@@ -7,15 +7,17 @@ import { SkeletonCard } from './components/SkeletonCard';
 import { Frown, Loader2, SearchX, Ghost } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 import { GameDeal } from './types';
-import { get, set } from 'idb-keyval';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameModal } from './components/GameModal';
 import { AuthModal } from './components/AuthModal';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { useAppSettings } from './contexts/AppSettingsContext';
+import { useAuth } from './contexts/AuthContext';
+import { supabase } from './lib/supabase';
 
 export default function App() {
   const { viewMode } = useAppSettings();
+  const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,43 +50,111 @@ export default function App() {
 
   const [selectedGame, setSelectedGame] = useState<GameDeal | null>(null);
 
-  // Load monitored games from IndexedDB
+  // Load monitored games from Supabase
   useEffect(() => {
     const loadMonitoredGames = async () => {
+      if (!user) {
+        setMonitoredGames([]);
+        return;
+      }
+
       try {
-        const storedGames = await get<GameDeal[]>('monitored-games');
-        if (storedGames) {
-          setMonitoredGames(storedGames);
+        const { data, error } = await supabase
+          .from('monitored_games')
+          .select('*')
+          .order('added_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Map database generic snake_case fields back to GameDeal camelCase structure
+        if (data) {
+           const mappedGames: GameDeal[] = data.map(item => ({
+             id: item.deal_id,
+             gameID: item.game_id,
+             title: item.title,
+             imageUrl: item.image_url,
+             originalPrice: item.original_price,
+             discountedPrice: item.discounted_price,
+             discountPercentage: item.discount_percentage,
+             store: item.store,
+             storeIcon: item.store_icon,
+             platform: item.platform,
+             url: item.url,
+             metacriticScore: item.metacritic_score,
+             steamRatingPercent: item.steam_rating_percent,
+             steamRatingText: item.steam_rating_text,
+             steamRatingCount: item.steam_rating_count,
+             releaseDate: item.release_date,
+             dealRating: item.deal_rating,
+           }));
+           setMonitoredGames(mappedGames);
         }
       } catch (err) {
-        console.error('Failed to load monitored games:', err);
+        console.error('Failed to load monitored games from Supabase:', err);
       }
     };
     loadMonitoredGames();
-  }, []);
+  }, [user]);
 
-  // Save monitored games to IndexedDB
-  useEffect(() => {
-    const saveMonitoredGames = async () => {
-      try {
-        await set('monitored-games', monitoredGames);
-      } catch (err) {
-        console.error('Failed to save monitored games:', err);
-      }
-    };
-    // Only save if we have loaded them (or it's empty, which is fine)
-    saveMonitoredGames();
-  }, [monitoredGames]);
+  const toggleMonitor = async (deal: GameDeal) => {
+    if (!user) {
+      // Prompt user to login if they try to monitor while logged out
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+      return;
+    }
 
-  const toggleMonitor = (deal: GameDeal) => {
-    setMonitoredGames(prev => {
-      const isMonitored = prev.some(g => g.id === deal.id);
-      if (isMonitored) {
-        return prev.filter(g => g.id !== deal.id);
-      } else {
-        return [...prev, deal];
+    const isMonitored = monitoredGames.some(g => g.id === deal.id);
+
+    if (isMonitored) {
+      // Optimistic UI update
+      setMonitoredGames(prev => prev.filter(g => g.id !== deal.id));
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('monitored_games')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('deal_id', deal.id);
+        
+      if (error) {
+        console.error('Failed to delete monitored game:', error);
+        // Revert UI on failure (optional)
       }
-    });
+    } else {
+      // Optimistic UI update
+      setMonitoredGames(prev => [deal, ...prev]);
+
+      // Insert to Supabase
+      const { error } = await supabase
+        .from('monitored_games')
+        .insert({
+           user_id: user.id,
+           deal_id: deal.id,
+           game_id: deal.gameID,
+           title: deal.title,
+           image_url: deal.imageUrl,
+           original_price: deal.originalPrice,
+           discounted_price: deal.discountedPrice,
+           discount_percentage: deal.discountPercentage,
+           store: deal.store,
+           store_icon: deal.storeIcon,
+           platform: deal.platform,
+           url: deal.url,
+           metacritic_score: deal.metacriticScore,
+           steam_rating_percent: deal.steamRatingPercent,
+           steam_rating_text: deal.steamRatingText,
+           steam_rating_count: deal.steamRatingCount,
+           release_date: deal.releaseDate,
+           deal_rating: deal.dealRating
+        });
+
+      if (error) {
+        console.error('Failed to insert monitored game:', error);
+        // Revert UI on failure
+        setMonitoredGames(prev => prev.filter(g => g.id !== deal.id));
+      }
+    }
   };
 
   // Fetch stores and exchange rate on mount
