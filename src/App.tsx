@@ -11,6 +11,7 @@ import { get, set } from 'idb-keyval';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameModal } from './components/GameModal';
 import { AuthModal } from './components/AuthModal';
+import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { useAppSettings } from './contexts/AppSettingsContext';
 
 export default function App() {
