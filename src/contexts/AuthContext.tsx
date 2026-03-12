@@ -40,20 +40,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchProfile = async (currentUser: User) => {
     try {
-      // Tenta buscar o perfil existente
+      // Verifica se a sessão ainda é válida antes de criar perfis
+      const { data: { session: activeSession } } = await supabase.auth.getSession();
+      if (!activeSession) {
+        setProfile(null);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
-        .maybeSingle(); // Não dá erro se 0 rows
+        .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
         setProfile(data as Profile);
       } else {
-        // Perfil não existe ainda (trigger pode ter falhado) — cria manualmente
-        console.log('Profile not found, creating one...');
+        // Perfil não existe (trigger pode ter falhado) — cria manualmente
+        if (import.meta.env.DEV) console.log('Profile not found, creating one...');
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -64,8 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .single();
 
         if (insertError) {
-          console.error('Failed to create profile:', insertError);
-          // Se o insert falhou (talvez RLS block), setar um perfil local temporário
+          if (import.meta.env.DEV) console.error('Failed to create profile:', insertError);
           setProfile({
             id: currentUser.id,
             email: currentUser.email || '',
@@ -78,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (err) {
-      console.error('Failed to fetch profile:', err);
+      if (import.meta.env.DEV) console.error('Failed to fetch profile:', err);
       setProfile(null);
     }
   };

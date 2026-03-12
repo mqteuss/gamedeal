@@ -32,6 +32,12 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
       document.body.style.right = '0';
     });
 
+    // Fechar com Escape
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       cancelAnimationFrame(raf);
       document.body.style.overflow = '';
@@ -40,6 +46,7 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
       document.body.style.left = '';
       document.body.style.right = '';
       window.scrollTo(0, scrollYRef.current);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -265,13 +272,14 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
                   </h3>
                   
                   <div className="grid gap-3">
-                    {details.deals.map((deal) => {
-                      const store = availableStores.find(s => s.id === deal.storeID);
-                      if (!store) return null;
-                      
-                      const savings = Math.round(parseFloat(deal.savings));
+                    {(() => {
                       const cheapestPrice = Math.min(...details.deals.map(d => parseFloat(d.price)));
-                      const isBestDeal = parseFloat(deal.price) === cheapestPrice;
+                      return details.deals.map((deal) => {
+                        const store = availableStores.find(s => s.id === deal.storeID);
+                        if (!store) return null;
+                      
+                        const savings = Math.round(parseFloat(deal.savings));
+                        const isBestDeal = parseFloat(deal.price) === cheapestPrice;
 
                       return (
                         <a
@@ -315,7 +323,8 @@ export const GameModal: React.FC<GameModalProps> = ({ game, onClose, exchangeRat
                           </div>
                         </a>
                       );
-                    })}
+                    });
+                    })()}
                   </div>
                 </div>
               </div>

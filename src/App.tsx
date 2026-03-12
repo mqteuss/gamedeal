@@ -48,6 +48,9 @@ export default function App() {
   const [showMonitoredOnly, setShowMonitoredOnly] = useState(false);
   const [monitoredVisibleCount, setMonitoredVisibleCount] = useState(20);
 
+  // O(1) lookup para saber se um deal está monitorado
+  const monitoredIds = useMemo(() => new Set(monitoredGames.map(g => g.id)), [monitoredGames]);
+
   const [selectedGame, setSelectedGame] = useState<GameDeal | null>(null);
 
   // Load monitored games from Supabase
@@ -499,26 +502,14 @@ export default function App() {
                       : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                     }>
                       {offersDeals.map(deal => (
-                        <div key={deal.id} className={viewMode === 'list' ? 'block' : 'hidden sm:block'}>
-                          <GameCard 
-                            deal={deal}
-                            isMonitored={monitoredGames.some(g => g.id === deal.id)}
-                            onToggleMonitor={toggleMonitor}
-                            onClick={() => setSelectedGame(deal)}
-                            layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
-                          />
-                        </div>
-                      ))}
-                      {viewMode === 'grid' && offersDeals.map(deal => (
-                        <div key={`mobile-${deal.id}`} className="block sm:hidden">
-                          <GameCard 
-                            deal={deal}
-                            isMonitored={monitoredGames.some(g => g.id === deal.id)}
-                            onToggleMonitor={toggleMonitor}
-                            onClick={() => setSelectedGame(deal)}
-                            layout="horizontal"
-                          />
-                        </div>
+                        <GameCard 
+                          key={deal.id}
+                          deal={deal}
+                          isMonitored={monitoredIds.has(deal.id)}
+                          onToggleMonitor={toggleMonitor}
+                          onClick={() => setSelectedGame(deal)}
+                          layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -573,26 +564,14 @@ export default function App() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {monitoredGames.slice(0, monitoredVisibleCount).map(deal => (
-                      <div key={`monitored-${deal.id}`} className="hidden sm:block">
-                        <GameCard 
-                          deal={deal}
-                          isMonitored={true}
-                          onToggleMonitor={toggleMonitor}
-                          onClick={() => setSelectedGame(deal)}
-                          layout="vertical"
-                        />
-                      </div>
-                    ))}
-                    {monitoredGames.slice(0, monitoredVisibleCount).map(deal => (
-                      <div key={`mobile-monitored-${deal.id}`} className="block sm:hidden">
-                        <GameCard 
-                          deal={deal}
-                          isMonitored={true}
-                          onToggleMonitor={toggleMonitor}
-                          onClick={() => setSelectedGame(deal)}
-                          layout="horizontal"
-                        />
-                      </div>
+                      <GameCard
+                        key={`monitored-${deal.id}`}
+                        deal={deal}
+                        isMonitored={true}
+                        onToggleMonitor={toggleMonitor}
+                        onClick={() => setSelectedGame(deal)}
+                        layout="vertical"
+                      />
                     ))}
                   </div>
 
@@ -608,10 +587,27 @@ export default function App() {
                   <div className="bg-zinc-900/50 p-8 rounded-full mb-8 border border-white/5 shadow-2xl shadow-black/50">
                     <Ghost size={56} className="text-zinc-500" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Sua lista está vazia</h3>
-                  <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
-                    Você ainda não está monitorando nenhum jogo. Explore as ofertas e clique no ícone de olho para adicioná-las aqui.
-                  </p>
+                  {user ? (
+                    <>
+                      <h3 className="text-2xl font-bold text-white mb-3">Sua lista está vazia</h3>
+                      <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
+                        Você ainda não está monitorando nenhum jogo. Explore as ofertas e clique no ícone de olho para adicioná-las aqui.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-2xl font-bold text-white mb-3">Faça login para monitorar</h3>
+                      <p className="text-zinc-400 max-w-md text-lg leading-relaxed mb-6">
+                        Crie uma conta ou faça login para salvar jogos na sua lista de monitoramento.
+                      </p>
+                      <button
+                        onClick={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-6 rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
+                      >
+                        Criar Conta
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

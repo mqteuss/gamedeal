@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Gamepad2, Menu, Sun, Moon, LayoutGrid, List, User, LogOut } from 'lucide-react';
+import { Search, Gamepad2, Menu, LayoutGrid, List, User, LogOut } from 'lucide-react';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
-import type { Profile } from '../contexts/AuthContext';
 
 interface HeaderProps {
   searchQuery: string;
@@ -27,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
-  const { theme, toggleTheme, viewMode, toggleViewMode } = useAppSettings();
+  const { viewMode, toggleViewMode } = useAppSettings();
   const { user, profile, signOut } = useAuth();
 
   // Display name: profile username > email prefix > 'Usuário'
@@ -154,14 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {viewMode === 'grid' ? <List size={18} /> : <LayoutGrid size={18} />}
               </button>
 
-              {/* Theme toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-              >
-                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
+
 
               {/* Auth Section */}
               <div className="flex items-center gap-2 ml-2">

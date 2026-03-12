@@ -83,7 +83,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ deals, onDea
                 i === current ? 'opacity-60' : 'opacity-0'
               }`}
               referrerPolicy="no-referrer"
-              loading={i === 0 ? 'eager' : 'lazy'}
+              loading={i === current ? 'eager' : 'lazy'}
             />
           );
         })}

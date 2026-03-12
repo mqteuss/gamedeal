@@ -11,7 +11,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) => {
-  const { refreshProfile, user } = useAuth();
+  const { refreshProfile } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
 
   // Sincroniza o mode com o initialMode sempre que o modal abrir
@@ -20,6 +20,16 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
       setMode(initialMode);
     }
   }, [isOpen, initialMode]);
+
+  // Fechar com Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -94,44 +104,29 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
   const saveProfileData = async (userId: string, displayName: string, userEmail?: string, avatarDataUrl?: string | null) => {
     const updateData: any = { username: displayName };
 
-    // Comprimir e salvar avatar diretamente como base64
     if (avatarDataUrl) {
       try {
         const compressed = await compressImage(avatarDataUrl);
         updateData.avatar_url = compressed;
-        console.log('Avatar compressed successfully, length:', compressed.length);
       } catch (err) {
-        console.error('Failed to compress avatar:', err);
+        if (import.meta.env.DEV) console.error('Failed to compress avatar:', err);
       }
     }
 
-    // Pequeno delay para garantir que o trigger já criou o perfil
+    // Delay para garantir que o trigger já criou o perfil
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    console.log('Saving profile data:', { userId, username: displayName, hasAvatar: !!updateData.avatar_url });
-
-    // Tentar update primeiro
-    const { error: updateError } = await supabase
+    // Upsert direto: cria ou atualiza o perfil de forma confiável
+    const { error: upsertError } = await supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', userId);
+      .upsert({
+        id: userId,
+        email: userEmail || '',
+        ...updateData,
+      });
 
-    if (updateError) {
-      console.error('Update failed, trying upsert:', updateError);
-      // Fallback: upsert (cria se não existir)
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: userEmail || '',
-          ...updateData,
-        });
-
-      if (upsertError) {
-        console.error('Failed to save profile:', upsertError);
-      }
-    } else {
-      console.log('Profile saved successfully!');
+    if (upsertError) {
+      if (import.meta.env.DEV) console.error('Failed to save profile:', upsertError);
     }
   };
 
@@ -151,8 +146,19 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
           return;
         }
 
-        if (!username.trim()) {
+        const trimmedName = username.trim();
+        if (!trimmedName) {
           setError('Por favor, insira um nome de usuário.');
+          setIsLoading(false);
+          return;
+        }
+        if (trimmedName.length > 20) {
+          setError('O nome de usuário deve ter no máximo 20 caracteres.');
+          setIsLoading(false);
+          return;
+        }
+        if (!/^[\w\sÀ-ÿ.-]+$/.test(trimmedName)) {
+          setError('O nome de usuário contém caracteres inválidos.');
           setIsLoading(false);
           return;
         }
@@ -212,17 +218,18 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         handleClose();
       }
     } catch (err: any) {
-      console.error('Auth error:', err);
-      if (err.message.includes('Invalid login credentials')) {
+      if (import.meta.env.DEV) console.error('Auth error:', err);
+      const msg = err?.message || '';
+      if (msg.includes('Invalid login credentials')) {
         setError('Email ou senha inválidos.');
-      } else if (err.message.includes('User already registered')) {
+      } else if (msg.includes('User already registered')) {
         setError('Este email já está cadastrado.');
-      } else if (err.message.includes('Password should be at least')) {
+      } else if (msg.includes('Password should be at least')) {
         setError('A senha deve ter pelo menos 6 caracteres.');
-      } else if (err.message.includes('Email not confirmed')) {
+      } else if (msg.includes('Email not confirmed')) {
         setError('Email não confirmado. Verifique sua caixa de entrada.');
       } else {
-         setError(err.message || 'Ocorreu um erro durante a autenticação.');
+        setError(msg || 'Ocorreu um erro durante a autenticação.');
       }
     } finally {
       setIsLoading(false);
@@ -348,6 +355,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                       onChange={(e) => setUsername(e.target.value)}
                       required
                       placeholder="Seu nome de exibição"
+                      maxLength={20}
                       autoComplete="username"
                       className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-zinc-950/50 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
                     />
